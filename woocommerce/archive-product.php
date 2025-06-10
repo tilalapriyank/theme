@@ -420,13 +420,34 @@ document.addEventListener('alpine:init', () => {
                                                     </svg>
                                                     Quick View
                                                 </a>
-                                                <?php
-                                                    /**
-                                                     * Output the standard WooCommerce add-to-cart button for archives.
-                                                     * This ensures AJAX add-to-cart works and is compatible with all product types.
-                                                     */
-                                                    woocommerce_template_loop_add_to_cart();
-                                                ?>
+                                                
+                                                <!-- FIXED ADD TO CART SECTION -->
+                                                <?php if ($product->get_type() === 'variable') : ?>
+                                                    <!-- For variable products, redirect to product page -->
+                                                    <a
+                                                        href="<?php echo esc_url($product_link); ?>"
+                                                        class="bg-[#FF3A5E] hover:bg-[#FF3A5E]/90 text-white w-full py-2 px-4 rounded-full text-sm font-medium flex items-center justify-center"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 9H19m-7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                                                        </svg>
+                                                        Select Options
+                                                    </a>
+                                                <?php else : ?>
+                                                    <!-- For simple products, use AJAX add to cart -->
+                                                    <button
+                                                        type="button"
+                                                        class="ajax-add-to-cart bg-[#FF3A5E] hover:bg-[#FF3A5E]/90 text-white w-full py-2 px-4 rounded-full text-sm font-medium flex items-center justify-center"
+                                                        data-product_id="<?php echo esc_attr($product_id); ?>"
+                                                        data-product_sku="<?php echo esc_attr($product->get_sku()); ?>"
+                                                        data-quantity="1"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 9H19m-7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                                                        </svg>
+                                                        <span class="add-to-cart-text">Add to Cart</span>
+                                                    </button>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
@@ -551,8 +572,97 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
+// FIXED: Custom AJAX Add to Cart for Simple Products
+function handleAjaxAddToCart() {
+    const buttons = document.querySelectorAll('.ajax-add-to-cart');
+    
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const productId = this.getAttribute('data-product_id');
+            const quantity = this.getAttribute('data-quantity') || 1;
+            const textElement = this.querySelector('.add-to-cart-text');
+            const originalText = textElement.textContent;
+            
+            // Show loading state
+            this.classList.add('loading');
+            this.disabled = true;
+            textElement.textContent = 'Adding...';
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('action', 'woocommerce_add_to_cart');
+            formData.append('product_id', productId);
+            formData.append('quantity', quantity);
+            formData.append('add-to-cart', productId);
+            
+            // Make AJAX request
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error && data.product_url) {
+                    // If there's an error, redirect to product page
+                    window.location.href = data.product_url;
+                    return;
+                }
+                
+                // Success - update cart fragments if available
+                if (data.fragments) {
+                    // Update cart fragments
+                    Object.keys(data.fragments).forEach(key => {
+                        const element = document.querySelector(key);
+                        if (element) {
+                            element.innerHTML = data.fragments[key];
+                        }
+                    });
+                }
+                
+                // Show success state
+                this.classList.remove('loading');
+                this.classList.add('added');
+                textElement.textContent = 'Added!';
+                
+                // Show toast notification
+                showToast('Product added to cart!', 'success');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    this.classList.remove('added');
+                    this.disabled = false;
+                    textElement.textContent = originalText;
+                }, 2000);
+                
+                // Trigger WooCommerce events if jQuery is available
+                if (typeof jQuery !== 'undefined') {
+                    jQuery('body').trigger('added_to_cart', [data.fragments, data.cart_hash, this]);
+                }
+            })
+            .catch(error => {
+                console.error('Add to cart error:', error);
+                
+                // Reset button state
+                this.classList.remove('loading');
+                this.disabled = false;
+                textElement.textContent = originalText;
+                
+                // Show error message
+                showToast('Error adding product to cart', 'error');
+            });
+        });
+    });
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize custom add to cart handlers
+    handleAjaxAddToCart();
+    
     // Check if WooCommerce add to cart params are available
     if (typeof wc_add_to_cart_params === 'undefined') {
         window.wc_add_to_cart_params = {
@@ -573,10 +683,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    console.log('Shop page initialized with filters and AJAX add to cart');
+    console.log('Shop page initialized with fixed add to cart functionality');
 });
 
-// jQuery compatibility for WooCommerce
+// jQuery compatibility for WooCommerce (if available)
 if (typeof jQuery !== 'undefined') {
     jQuery(document).ready(function($) {
         // Handle WooCommerce events
@@ -611,12 +721,12 @@ if (typeof jQuery !== 'undefined') {
 
 <style>
 /* Additional CSS for better functionality */
-.add-to-cart-btn.loading {
+.ajax-add-to-cart.loading {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
-.add-to-cart-btn.added {
+.ajax-add-to-cart.added {
     background-color: #28a745 !important;
 }
 

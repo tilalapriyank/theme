@@ -90,7 +90,6 @@ function hype_pups_register_menus() {
 }
 add_action('init', 'hype_pups_register_menus');
 
-
 // Enqueue scripts and styles
 function hype_pups_scripts() {
     // Enqueue custom CSS
@@ -126,6 +125,300 @@ function enqueue_swiper_assets() {
     wp_enqueue_script('swiper-js', 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js', array(), null, true);
 }
 add_action('wp_enqueue_scripts', 'enqueue_swiper_assets');
+
+// FIXED: Variable Product AJAX Handlers - ADD THESE TO YOUR FUNCTIONS.PHP
+
+// AJAX handler for finding variation ID based on attributes
+add_action('wp_ajax_find_variation_id', 'find_variation_id_ajax');
+add_action('wp_ajax_nopriv_find_variation_id', 'find_variation_id_ajax');
+
+function find_variation_id_ajax() {
+    if (!isset($_POST['product_id']) || !isset($_POST['attributes'])) {
+        wp_send_json_error('Missing required parameters');
+    }
+    
+    $product_id = intval($_POST['product_id']);
+    $attributes_input = $_POST['attributes'];
+    
+    // Handle both JSON string and array input
+    if (is_string($attributes_input)) {
+        $attributes = json_decode(stripslashes($attributes_input), true);
+    } else {
+        $attributes = $attributes_input;
+    }
+    
+    if (!$attributes) {
+        wp_send_json_error('Invalid attributes format');
+    }
+    
+    $product = wc_get_product($product_id);
+    
+    if (!$product || !$product->is_type('variable')) {
+        wp_send_json_error('Invalid variable product');
+    }
+    
+    // Get available variations
+    $available_variations = $product->get_available_variations();
+    
+    // Find matching variation
+    foreach ($available_variations as $variation) {
+        $variation_attributes = $variation['attributes'];
+        $match = true;
+        
+        foreach ($attributes as $attribute_name => $attribute_value) {
+            // Ensure proper attribute name format
+            if (!str_starts_with($attribute_name, 'attribute_')) {
+                $variation_attribute_name = 'attribute_' . $attribute_name;
+            } else {
+                $variation_attribute_name = $attribute_name;
+            }
+            
+            // Check if this variation has the required attribute value
+            if (!isset($variation_attributes[$variation_attribute_name])) {
+                $match = false;
+                break;
+            }
+            
+            $variation_value = $variation_attributes[$variation_attribute_name];
+            
+            // Handle empty variation attributes (means "any")
+            if ($variation_value !== '' && $variation_value !== $attribute_value) {
+                $match = false;
+                break;
+            }
+        }
+        
+        if ($match) {
+            wp_send_json_success([
+                'variation_id' => $variation['variation_id'],
+                'is_purchasable' => $variation['is_purchasable'],
+                'is_in_stock' => $variation['is_in_stock'],
+                'price_html' => $variation['price_html'],
+                'matched_attributes' => $variation_attributes
+            ]);
+        }
+    }
+    
+    wp_send_json_error('No matching variation found for the selected attributes');
+}
+
+// Enhanced AJAX add to cart handler for variable products
+add_action('wp_ajax_add_variable_to_cart', 'add_variable_to_cart_ajax');
+add_action('wp_ajax_nopriv_add_variable_to_cart', 'add_variable_to_cart_ajax');
+
+function add_variable_to_cart_ajax() {
+    if (!isset($_POST['product_id']) || !isset($_POST['variation_id'])) {
+        wp_send_json_error('Missing required parameters');
+    }
+    
+    $product_id = intval($_POST['product_id']);
+    $variation_id = intval($_POST['variation_id']);
+    $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
+    $attributes = isset($_POST['attributes']) ? $_POST['attributes'] : array();
+    
+    // Validate the variation
+    $variation = wc_get_product($variation_id);
+    if (!$variation || !$variation->is_purchasable()) {
+        wp_send_json_error('Product variation is not available');
+    }
+    
+    // Format attributes for cart
+    $variation_data = array();
+    foreach ($attributes as $key => $value) {
+        $variation_data['attribute_' . $key] = $value;
+    }
+    
+    // Add to cart
+    $cart_item_key = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation_data);
+    
+    if ($cart_item_key) {
+        // Get updated cart fragments
+        WC_AJAX::get_refreshed_fragments();
+    } else {
+        wp_send_json_error('Failed to add product to cart');
+    }
+}
+
+// AJAX handler to get product variations
+add_action('wp_ajax_get_product_variations', 'get_product_variations_ajax');
+add_action('wp_ajax_nopriv_get_product_variations', 'get_product_variations_ajax');
+
+function get_product_variations_ajax() {
+    if (!isset($_POST['product_id'])) {
+        wp_send_json_error('Missing product ID');
+    }
+    
+    $product_id = intval($_POST['product_id']);
+    $product = wc_get_product($product_id);
+    
+    if (!$product || !$product->is_type('variable')) {
+        wp_send_json_error('Invalid variable product');
+    }
+    
+    $variations = $product->get_available_variations();
+    
+    // Filter out unnecessary data to reduce payload size
+    $filtered_variations = array();
+    foreach ($variations as $variation) {
+        $filtered_variations[] = array(
+            'variation_id' => $variation['variation_id'],
+            'attributes' => $variation['attributes'],
+            'is_purchasable' => $variation['is_purchasable'],
+            'is_in_stock' => $variation['is_in_stock'],
+            'price_html' => $variation['price_html']
+        );
+    }
+    
+    wp_send_json_success($filtered_variations);
+}
+
+// Debug function to check variations
+function debug_product_variations($product_id) {
+    $product = wc_get_product($product_id);
+    
+    if (!$product || !$product->is_type('variable')) {
+        return 'Not a variable product';
+    }
+    
+    $variations = $product->get_available_variations();
+    
+    echo '<pre>';
+    echo "Product ID: $product_id\n";
+    echo "Total Variations: " . count($variations) . "\n\n";
+    
+    foreach ($variations as $variation) {
+        echo "Variation ID: " . $variation['variation_id'] . "\n";
+        echo "Attributes: " . print_r($variation['attributes'], true) . "\n";
+        echo "In Stock: " . ($variation['is_in_stock'] ? 'Yes' : 'No') . "\n";
+        echo "Purchasable: " . ($variation['is_purchasable'] ? 'Yes' : 'No') . "\n";
+        echo "---\n";
+    }
+    echo '</pre>';
+}
+
+// Shortcode to debug variations (use [debug_variations id="105"])
+add_shortcode('debug_variations', function($atts) {
+    $atts = shortcode_atts(['id' => 0], $atts);
+    if ($atts['id']) {
+        ob_start();
+        debug_product_variations($atts['id']);
+        return ob_get_clean();
+    }
+    return 'Please provide product ID';
+});
+
+// Fix for single product page variations
+add_action('wp_footer', 'add_variable_product_scripts');
+
+function add_variable_product_scripts() {
+    if (is_product()) {
+        global $product;
+        if ($product && $product->is_type('variable')) {
+            ?>
+            <script>
+            jQuery(document).ready(function($) {
+                // Override the default variation form behavior
+                $('form.variations_form').on('woocommerce_variation_has_changed', function() {
+                    var $form = $(this);
+                    var product_id = $form.find('input[name="product_id"]').val();
+                    var $variations = $form.find('select[name^="attribute_"]');
+                    var attributes = {};
+                    var allSelected = true;
+                    
+                    $variations.each(function() {
+                        var attribute_name = $(this).attr('name');
+                        var attribute_value = $(this).val();
+                        
+                        if (attribute_value === '') {
+                            allSelected = false;
+                        } else {
+                            attributes[attribute_name] = attribute_value;
+                        }
+                    });
+                    
+                    if (allSelected) {
+                        // Find the variation ID
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'find_variation_id',
+                            product_id: product_id,
+                            attributes: attributes
+                        }, function(response) {
+                            if (response.success) {
+                                $form.find('input[name="variation_id"]').val(response.data.variation_id);
+                                
+                                // Update add to cart button
+                                var $button = $form.find('.single_add_to_cart_button');
+                                if (response.data.is_purchasable && response.data.is_in_stock) {
+                                    $button.removeClass('disabled wc-variation-is-unavailable')
+                                           .addClass('wc-variation-selection-needed');
+                                } else {
+                                    $button.addClass('disabled wc-variation-is-unavailable');
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // Enhanced add to cart for variable products
+                $('form.variations_form').on('submit', function(e) {
+                    var $form = $(this);
+                    var $button = $form.find('.single_add_to_cart_button');
+                    
+                    // Check if it's an AJAX add to cart
+                    if ($button.hasClass('ajax_add_to_cart')) {
+                        e.preventDefault();
+                        
+                        var product_id = $form.find('input[name="product_id"]').val();
+                        var variation_id = $form.find('input[name="variation_id"]').val();
+                        var quantity = $form.find('input[name="quantity"]').val();
+                        var attributes = {};
+                        
+                        $form.find('select[name^="attribute_"]').each(function() {
+                            var name = $(this).attr('name').replace('attribute_', '');
+                            attributes[name] = $(this).val();
+                        });
+                        
+                        if (!variation_id || variation_id === '0') {
+                            alert('Please select all product options');
+                            return false;
+                        }
+                        
+                        // Show loading
+                        $button.addClass('loading').text('Adding...');
+                        
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'add_variable_to_cart',
+                            product_id: product_id,
+                            variation_id: variation_id,
+                            quantity: quantity,
+                            attributes: attributes
+                        }, function(response) {
+                            if (response.success) {
+                                // Update cart fragments
+                                $(document.body).trigger('added_to_cart', [response.fragments, response.cart_hash, $button]);
+                                
+                                // Show success
+                                $button.removeClass('loading').addClass('added').text('Added!');
+                                
+                                setTimeout(function() {
+                                    $button.removeClass('added').text('Add to cart');
+                                }, 2000);
+                            } else {
+                                $button.removeClass('loading');
+                                alert('Error: ' + (response.data || 'Failed to add to cart'));
+                            }
+                        }).fail(function() {
+                            $button.removeClass('loading');
+                            alert('Error adding product to cart');
+                        });
+                    }
+                });
+            });
+            </script>
+            <?php
+        }
+    }
+}
 
 // Register Blog Post Type
 function register_blog_post_type() {
@@ -715,3 +1008,27 @@ add_action('wp_enqueue_scripts', function() {
         wp_enqueue_script('wc-cart-fragments');
     }
 });
+
+
+// Add to your theme's functions.php - REMOVE after debugging
+add_action('wp_ajax_woocommerce_add_to_cart_variable_product', 'debug_ajax_add_to_cart');
+add_action('wp_ajax_nopriv_woocommerce_add_to_cart_variable_product', 'debug_ajax_add_to_cart');
+
+function debug_ajax_add_to_cart() {
+    error_log('AJAX Add to Cart Debug:');
+    error_log('POST data: ' . print_r($_POST, true));
+    
+    if (isset($_POST['product_id'])) {
+        $product = wc_get_product($_POST['product_id']);
+        error_log('Product type: ' . $product->get_type());
+        error_log('Available variations: ' . print_r($product->get_available_variations(), true));
+    }
+}
+
+// Ensure WooCommerce variation scripts are loaded on single product pages
+function load_wc_variation_scripts() {
+    if (is_product()) {
+        wp_enqueue_script('wc-add-to-cart-variation');
+    }
+}
+add_action('wp_enqueue_scripts', 'load_wc_variation_scripts');
