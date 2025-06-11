@@ -16,7 +16,7 @@ get_header( 'shop' ); ?>
             /**
              * woocommerce_before_main_content hook.
              */
-            do_action( 'woocommerce_before_main_content' );
+            // do_action( 'woocommerce_before_main_content' );
             ?>
 
             <?php while ( have_posts() ) : ?>
@@ -34,65 +34,129 @@ get_header( 'shop' ); ?>
 
                 <div id="product-<?php the_ID(); ?>" <?php wc_product_class( 'single-product-wrapper', $product ); ?>>
                     
-                    <div class="product-main-content">
-                        <div class="row">
-                            <!-- Product Images Column -->
-                            <div class="col-md-6 product-images">
-                                <?php
-                                /**
-                                 * Hook: woocommerce_before_single_product_summary.
-                                 *
-                                 * @hooked woocommerce_show_product_sale_flash - 10
-                                 * @hooked woocommerce_show_product_images - 20
-                                 */
-                                do_action( 'woocommerce_before_single_product_summary' );
-                                ?>
-                            </div>
+                    <div class="product-main-content grid grid-cols-1 md:grid-cols-2 py-8">
+                        <!-- Product Images Column -->
+                        <div class="product-images flex flex-col">
+                            <?php
+                            /**
+                             * Hook: woocommerce_before_single_product_summary.
+                             *
+                             * @hooked woocommerce_show_product_sale_flash - 10
+                             * @hooked woocommerce_show_product_images - 20
+                             */
+                            do_action( 'woocommerce_before_single_product_summary' );
+                            ?>
+                        </div>
 
-                            <!-- Product Summary Column -->
-                            <div class="col-md-6 product-summary">
-                                <div class="summary entry-summary">
-                                    
-                                    <!-- Product Title -->
-                                    <h1 class="product_title entry-title"><?php the_title(); ?></h1>
-                                    
-                                    <!-- Product Rating -->
-                                    <?php if ( wc_review_ratings_enabled() ) : ?>
-                                        <div class="woocommerce-product-rating">
-                                            <?php echo wc_get_rating_html( $product->get_average_rating() ); ?>
-                                            <a href="#reviews" class="woocommerce-review-link" rel="nofollow">
-                                                (<?php printf( _n( '%s customer review', '%s customer reviews', $product->get_review_count(), 'woocommerce' ), '<span class="count">' . esc_html( $product->get_review_count() ) . '</span>' ); ?>)
-                                            </a>
-                                        </div>
-                                    <?php endif; ?>
+                        <!-- Product Summary Column -->
+                        <div class="product-summary">
+                            <div class="summary entry-summary flex flex-col gap-4">
+                                <!-- Product Title -->
+                                <h1 class="product_title entry-title text-3xl font-bold text-gray-900"><?php the_title(); ?></h1>
 
-                                    <!-- Product Price -->
-                                    <p class="price"><?php echo $product->get_price_html(); ?></p>
-
-                                    <!-- Product Short Description -->
-                                    <div class="woocommerce-product-details__short-description">
-                                        <?php echo apply_filters( 'woocommerce_short_description', $post->post_excerpt ); ?>
+                                <!-- Product Rating -->
+                                <?php if ( wc_review_ratings_enabled() ) : ?>
+                                    <div class="flex items-center gap-2">
+                                        <?php echo wc_get_rating_html( $product->get_average_rating() ); ?>
+                                        <a href="#reviews" class="text-sm text-gray-500 hover:underline" rel="nofollow">
+                                            (<?php printf( _n( '%s review', '%s reviews', $product->get_review_count(), 'woocommerce' ), '<span class="count">' . esc_html( $product->get_review_count() ) . '</span>' ); ?>)
+                                        </a>
                                     </div>
+                                <?php endif; ?>
 
-                                    <!-- Variable Product Form -->
+                                <!-- Product Price -->
+                                <p class="price text-2xl font-bold text-pink-600"><?php echo $product->get_price_html(); ?></p>
+
+                                <!-- Product Short Description -->
+                                <div class="woocommerce-product-details__short-description text-gray-700">
+                                    <?php echo apply_filters( 'woocommerce_short_description', $post->post_excerpt ); ?>
+                                </div>
+
+                                <!-- Key Features (Dynamic from custom field, fallback to static) -->
+                                <div class="mb-4">
+                                    <h3 class="font-semibold text-lg mb-2">Key Features</h3>
+                                    <ul class="list-none space-y-1">
+                                        <?php 
+                                        $features = get_post_meta(get_the_ID(), 'product_features', true);
+                                        if ($features) {
+                                            $features_arr = array_filter(array_map('trim', explode("\n", $features)));
+                                            foreach ($features_arr as $feature) {
+                                                echo '<li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> ' . esc_html($feature) . '</li>';
+                                            }
+                                        } else {
+                                        ?>
+                                            <li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> Water-resistant outer shell protects from light rain and snow</li>
+                                            <li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> Premium insulation keeps your dog warm in cold weather</li>
+                                            <li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> Reflective details for visibility during evening walks</li>
+                                            <li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> Full-length zipper for easy on/off</li>
+                                            <li class="flex items-center text-sm text-gray-700"><span class="text-pink-500 mr-2">&#10003;</span> Adjustable straps for a perfect fit</li>
+                                        <?php } ?>
+                                    </ul>
+                                </div>
+
+                                <!-- Color Swatches (Dynamic) -->
+                                <?php
+                                $color_attribute = '';
+                                foreach ($attributes as $attr_name => $options) {
+                                    if (strpos($attr_name, 'color') !== false) {
+                                        $color_attribute = $attr_name;
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <?php if ($color_attribute): ?>
+                                <div class="mb-4">
+                                    <div class="font-semibold text-sm mb-1">Color</div>
+                                    <div class="flex gap-3">
+                                        <?php foreach ($attributes[$color_attribute] as $color): ?>
+                                            <?php $color_slug = sanitize_title($color); ?>
+                                            <span class="w-7 h-7 rounded-full border-2 border-gray-300 cursor-pointer flex items-center justify-center <?php if (isset($_REQUEST['attribute_' . $color_attribute]) && $_REQUEST['attribute_' . $color_attribute] === $color) echo 'ring-2 ring-pink-500 border-pink-500'; ?>" style="background: <?php echo esc_attr($color_slug); ?>;" title="<?php echo esc_attr($color); ?>"></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- Size Buttons (Dynamic) -->
+                                <?php
+                                $size_attribute = '';
+                                foreach ($attributes as $attr_name => $options) {
+                                    if (strpos($attr_name, 'size') !== false) {
+                                        $size_attribute = $attr_name;
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <?php if ($size_attribute): ?>
+                                <div class="mb-4 flex items-center gap-4">
+                                    <div class="font-semibold text-sm">Size</div>
+                                    <div class="flex gap-2">
+                                        <?php foreach ($attributes[$size_attribute] as $size): ?>
+                                            <button type="button" class="w-9 h-9 rounded-full border border-gray-300 text-gray-700 font-semibold hover:border-pink-500 <?php if (isset($_REQUEST['attribute_' . $size_attribute]) && $_REQUEST['attribute_' . $size_attribute] === $size) echo 'border-2 border-pink-500 text-pink-600'; ?>">
+                                                <?php echo esc_html($size); ?>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <a href="#" class="ml-4 text-xs text-pink-500 hover:underline">Size Guide</a>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- Improved spacing for Quantity and Add to Cart -->
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                                    <div class="font-semibold text-sm">Quantity</div>
+                                    <!-- WooCommerce Quantity Input and Add to Cart Button -->
                                     <?php if ( $product->is_type( 'variable' ) ) : ?>
-                                        <form class="variations_form cart" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo htmlspecialchars( wp_json_encode( $available_variations ) ) ?>">
-                                            
+                                        <form class="variations_form cart w-full" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo htmlspecialchars( wp_json_encode( $available_variations ) ) ?>">
                                             <?php wp_nonce_field( 'woocommerce-cart' ); ?>
-                                            
                                             <?php do_action( 'woocommerce_before_variations_form' ); ?>
-
                                             <?php if ( empty( $available_variations ) && false !== $available_variations ) : ?>
-                                                <p class="stock out-of-stock"><?php esc_html_e( 'This product is currently out of stock and unavailable.', 'woocommerce' ); ?></p>
+                                                <p class="stock out-of-stock text-red-500 text-sm"><?php esc_html_e( 'This product is currently out of stock and unavailable.', 'woocommerce' ); ?></p>
                                             <?php else : ?>
-                                                
-                                                <!-- Variations Table -->
-                                                <table class="variations" cellspacing="0">
+                                                <table class="variations w-full mb-2">
                                                     <tbody>
                                                         <?php foreach ( $attributes as $attribute_name => $options ) : ?>
                                                             <tr>
-                                                                <td class="label">
-                                                                    <label for="<?php echo esc_attr( sanitize_title( $attribute_name ) ); ?>">
+                                                                <td class="label pr-2">
+                                                                    <label for="<?php echo esc_attr( sanitize_title( $attribute_name ) ); ?>" class="font-semibold text-sm">
                                                                         <?php echo wc_attribute_label( $attribute_name ); ?>
                                                                     </label>
                                                                 </td>
@@ -111,13 +175,9 @@ get_header( 'shop' ); ?>
                                                         <?php endforeach; ?>
                                                     </tbody>
                                                 </table>
-
-                                                <!-- Selected Variation Details -->
                                                 <div class="single_variation_wrap">
                                                     <div class="woocommerce-variation single_variation"></div>
-                                                    
-                                                    <!-- Add to Cart Button -->
-                                                    <div class="woocommerce-variation-add-to-cart variations_button">
+                                                    <div class="woocommerce-variation-add-to-cart variations_button flex items-center gap-2 mt-2">
                                                         <?php
                                                         woocommerce_quantity_input(
                                                             array(
@@ -127,28 +187,21 @@ get_header( 'shop' ); ?>
                                                             )
                                                         );
                                                         ?>
-                                                        <button type="submit" class="single_add_to_cart_button button alt disabled wc-variation-selection-needed" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>">
+                                                        <button type="submit" class="single_add_to_cart_button button alt disabled wc-variation-selection-needed bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded transition" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>">
                                                             <?php echo esc_html( $product->single_add_to_cart_text() ); ?>
                                                         </button>
-                                                        
                                                         <input type="hidden" name="product_id" value="<?php echo esc_attr( $product->get_id() ); ?>" />
                                                         <input type="hidden" name="variation_id" class="variation_id" value="0" />
                                                     </div>
                                                 </div>
-
                                             <?php endif; ?>
-
                                             <?php do_action( 'woocommerce_after_variations_form' ); ?>
                                         </form>
-
                                     <?php else : ?>
-                                        <!-- Simple Product Add to Cart -->
-                                        <form class="cart" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data'>
+                                        <form class="cart w-full" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data'>
                                             <?php
                                             do_action( 'woocommerce_before_add_to_cart_button' );
-
                                             do_action( 'woocommerce_before_add_to_cart_quantity' );
-
                                             woocommerce_quantity_input(
                                                 array(
                                                     'min_value'   => apply_filters( 'woocommerce_quantity_input_min', $product->get_min_purchase_quantity(), $product ),
@@ -156,33 +209,16 @@ get_header( 'shop' ); ?>
                                                     'input_value' => isset( $_POST['quantity'] ) ? wc_stock_amount( wp_unslash( $_POST['quantity'] ) ) : $product->get_min_purchase_quantity(),
                                                 )
                                             );
-
                                             do_action( 'woocommerce_after_add_to_cart_quantity' );
                                             ?>
-
-                                            <button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="single_add_to_cart_button button alt">
+                                            <button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="single_add_to_cart_button button alt bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded transition">
                                                 <?php echo esc_html( $product->single_add_to_cart_text() ); ?>
                                             </button>
-
                                             <?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
                                         </form>
                                     <?php endif; ?>
-
-                                    <!-- Product Meta -->
-                                    <div class="product_meta">
-                                        <?php do_action( 'woocommerce_product_meta_start' ); ?>
-
-                                        <?php if ( wc_product_sku_enabled() && ( $product->get_sku() || $product->is_type( 'variable' ) ) ) : ?>
-                                            <span class="sku_wrapper"><?php esc_html_e( 'SKU:', 'woocommerce' ); ?> <span class="sku"><?php echo ( $sku = $product->get_sku() ) ? $sku : esc_html__( 'N/A', 'woocommerce' ); ?></span></span>
-                                        <?php endif; ?>
-
-                                        <?php echo wc_get_product_category_list( $product->get_id(), ', ', '<span class="posted_in">' . _n( 'Category:', 'Categories:', count( $product->get_category_ids() ), 'woocommerce' ) . ' ', '</span>' ); ?>
-
-                                        <?php echo wc_get_product_tag_list( $product->get_id(), ', ', '<span class="tagged_as">' . _n( 'Tag:', 'Tags:', count( $product->get_tag_ids() ), 'woocommerce' ) . ' ', '</span>' ); ?>
-
-                                        <?php do_action( 'woocommerce_product_meta_end' ); ?>
-                                    </div>
-
+                                    <button class="ml-2 px-4 py-2 border border-pink-500 text-pink-500 rounded hover:bg-pink-50 transition text-sm">Add to Wishlist <span class="ml-1">&#9825;</span></button>
+                                    <button class="ml-2 px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-lg"><span>&#128257;</span></button>
                                 </div>
                             </div>
                         </div>
@@ -234,10 +270,6 @@ get_header( 'shop' ); ?>
 
 .product-images {
     margin-bottom: 30px;
-}
-
-.product-summary {
-    padding: 0 15px;
 }
 
 .product_title {
@@ -335,6 +367,132 @@ get_header( 'shop' ); ?>
         width: 100%;
         margin-top: 10px;
     }
+}
+
+/* Custom styles for color swatches and size buttons */
+.product-summary .w-7.h-7 {
+    display: inline-block;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #e5e7eb;
+    transition: box-shadow 0.2s;
+}
+.product-summary .w-7.h-7.ring-2 {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #ec4899;
+}
+.product-summary .w-9.h-9 {
+    transition: border-color 0.2s, color 0.2s;
+}
+.product-summary .w-9.h-9.border-2 {
+    border-width: 2px;
+}
+
+.woocommerce #content div.product div.images, .woocommerce div.product div.images, .woocommerce-page #content div.product div.images, .woocommerce-page div.product div.images{
+    width: 100%;
+    object-fit: cover;
+}
+.woocommerce div.product div.summary{
+    width: 100%;
+    padding: 0 30px;
+}
+
+/* Main product image */
+.woocommerce div.product div.images img,
+.woocommerce-page div.product div.images img {
+    width: 100%;           /* Makes image responsive */
+    max-width: 500px;      /* Set your desired max width */
+    height: 500px;         /* Fixed height */
+    object-fit: cover;     /* Ensures image covers the area without distortion */
+    border-radius: 8px;    /* Optional: rounded corners */
+    margin: 0 auto 16px auto !important;
+    display: block;
+}
+
+/* Gallery thumbnails */
+.woocommerce div.product div.images .thumbnails img,
+.woocommerce-page div.product div.images .thumbnails img {
+    width: 100px;          /* Fixed width for thumbnails */
+    min-height: 100px !important;         /* Fixed height for thumbnails */
+    object-fit: cover;     /* Ensures thumbnails are not distorted */
+    border-radius: 6px;    /* Optional: rounded corners */
+    margin-right: 10px;
+    border: 1px solid #eee;
+    transition: border 0.2s;
+    cursor: pointer;
+}
+.woocommerce-product-gallery__trigger{
+    right: 6.5rem !important;
+}
+
+.woocommerce div.product div.images .thumbnails img:hover,
+.woocommerce-page div.product div.images .thumbnails img:hover {
+    border: 1px solid #ff3a5e;
+}
+img.flex-active{
+    border: 2px solid #ff3a5e !important;
+}
+.flex-control-nav.flex-control-thumbs li img{
+    width: 150px !important;
+    height: 150px !important;
+    /* padding-bottom: 10px; */
+}
+
+/* Custom WooCommerce Product Tabs */
+.woocommerce-tabs .wc-tabs {
+    display: flex;
+    border-bottom: 2px solid #f3f4f6 !important;
+    margin-bottom: 0;
+    padding-left: 0;
+    gap: 2rem;
+    background: none;
+    box-shadow: none;
+}
+
+.woocommerce-tabs .wc-tabs li {
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    background: none !important;
+    list-style: none;
+}
+
+.woocommerce-tabs .wc-tabs li a {
+    display: inline-block;
+    padding: 0 0 8px 0;
+    font-size: 1.25rem;
+    color: #64748b;
+    font-weight: 500;
+    border: none;
+    background: none;
+    text-decoration: none;
+    transition: color 0.2s;
+    position: relative;
+}
+
+.woocommerce-tabs .wc-tabs li.active a,
+.woocommerce-tabs .wc-tabs li a:focus,
+.woocommerce-tabs .wc-tabs li a:hover {
+    color: #ff3a5e !important;
+    font-weight: 600 !important;
+}
+
+.woocommerce-tabs .wc-tabs li.active a::after {
+    content: "";
+    display: block;
+    height: 5px;
+    width: 100%;
+    background: #ff3a5e;
+    border-radius: 2px;
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+}
+
+.woocommerce-tabs .wc-tab {
+    padding: 2rem 0 0 0;
+    border: none;
+    background: none;
+}
+.woocommerce-Tabs-panel h2{
+    display: none;
 }
 </style>
 

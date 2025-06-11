@@ -158,16 +158,7 @@ $is_simple = $product->get_type() === 'simple';
                 <?php else : ?>
                     <span class="text-gray-900 text-lg font-bold"><?php echo wc_price($product_price); ?></span>
                 <?php endif; ?>
-            </div>
-            
-            <!-- Product Categories (Optional) -->
-            <?php if ($category_name) : ?>
-                <div class="mt-2">
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        <?php echo esc_html($category_name); ?>
-                    </span>
-                </div>
-            <?php endif; ?>
+            </div>  
         </div>
     </div>
 </div>
