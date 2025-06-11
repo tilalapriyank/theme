@@ -94,131 +94,81 @@ get_header( 'shop' ); ?>
                                     </ul>
                                 </div>
 
-                                <!-- Color Swatches (Dynamic) -->
-                                <?php
-                                $color_attribute = '';
-                                foreach ($attributes as $attr_name => $options) {
-                                    if (strpos($attr_name, 'color') !== false) {
-                                        $color_attribute = $attr_name;
-                                        break;
-                                    }
-                                }
-                                ?>
-                                <?php if ($color_attribute): ?>
-                                <div class="mb-4">
-                                    <div class="font-semibold text-sm mb-1">Color</div>
-                                    <div class="flex gap-3">
-                                        <?php foreach ($attributes[$color_attribute] as $color): ?>
-                                            <?php $color_slug = sanitize_title($color); ?>
-                                            <span class="w-7 h-7 rounded-full border-2 border-gray-300 cursor-pointer flex items-center justify-center <?php if (isset($_REQUEST['attribute_' . $color_attribute]) && $_REQUEST['attribute_' . $color_attribute] === $color) echo 'ring-2 ring-pink-500 border-pink-500'; ?>" style="background: <?php echo esc_attr($color_slug); ?>;" title="<?php echo esc_attr($color); ?>"></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-
-                                <!-- Size Buttons (Dynamic) -->
-                                <?php
-                                $size_attribute = '';
-                                foreach ($attributes as $attr_name => $options) {
-                                    if (strpos($attr_name, 'size') !== false) {
-                                        $size_attribute = $attr_name;
-                                        break;
-                                    }
-                                }
-                                ?>
-                                <?php if ($size_attribute): ?>
-                                <div class="mb-4 flex items-center gap-4">
-                                    <div class="font-semibold text-sm">Size</div>
-                                    <div class="flex gap-2">
-                                        <?php foreach ($attributes[$size_attribute] as $size): ?>
-                                            <button type="button" class="w-9 h-9 rounded-full border border-gray-300 text-gray-700 font-semibold hover:border-pink-500 <?php if (isset($_REQUEST['attribute_' . $size_attribute]) && $_REQUEST['attribute_' . $size_attribute] === $size) echo 'border-2 border-pink-500 text-pink-600'; ?>">
-                                                <?php echo esc_html($size); ?>
-                                            </button>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <a href="#" class="ml-4 text-xs text-pink-500 hover:underline">Size Guide</a>
-                                </div>
-                                <?php endif; ?>
-
                                 <!-- Improved spacing for Quantity and Add to Cart -->
-                                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-                                    <div class="font-semibold text-sm">Quantity</div>
-                                    <!-- WooCommerce Quantity Input and Add to Cart Button -->
-                                    <?php if ( $product->is_type( 'variable' ) ) : ?>
-                                        <form class="variations_form cart w-full" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo htmlspecialchars( wp_json_encode( $available_variations ) ) ?>">
-                                            <?php wp_nonce_field( 'woocommerce-cart' ); ?>
-                                            <?php do_action( 'woocommerce_before_variations_form' ); ?>
-                                            <?php if ( empty( $available_variations ) && false !== $available_variations ) : ?>
-                                                <p class="stock out-of-stock text-red-500 text-sm"><?php esc_html_e( 'This product is currently out of stock and unavailable.', 'woocommerce' ); ?></p>
-                                            <?php else : ?>
-                                                <table class="variations w-full mb-2">
-                                                    <tbody>
-                                                        <?php foreach ( $attributes as $attribute_name => $options ) : ?>
-                                                            <tr>
-                                                                <td class="label pr-2">
-                                                                    <label for="<?php echo esc_attr( sanitize_title( $attribute_name ) ); ?>" class="font-semibold text-sm">
-                                                                        <?php echo wc_attribute_label( $attribute_name ); ?>
-                                                                    </label>
-                                                                </td>
-                                                                <td class="value">
-                                                                    <?php
-                                                                    wc_dropdown_variation_attribute_options(
-                                                                        array(
-                                                                            'options'   => $options,
-                                                                            'attribute' => $attribute_name,
-                                                                            'product'   => $product,
-                                                                        )
-                                                                    );
-                                                                    ?>
-                                                                </td>
-                                                            </tr>
-                                                        <?php endforeach; ?>
-                                                    </tbody>
-                                                </table>
-                                                <div class="single_variation_wrap">
-                                                    <div class="woocommerce-variation single_variation"></div>
-                                                    <div class="woocommerce-variation-add-to-cart variations_button flex items-center gap-2 mt-2">
-                                                        <?php
-                                                        woocommerce_quantity_input(
-                                                            array(
-                                                                'min_value'   => apply_filters( 'woocommerce_quantity_input_min', $product->get_min_purchase_quantity(), $product ),
-                                                                'max_value'   => apply_filters( 'woocommerce_quantity_input_max', $product->get_max_purchase_quantity(), $product ),
-                                                                'input_value' => isset( $_POST['quantity'] ) ? wc_stock_amount( wp_unslash( $_POST['quantity'] ) ) : $product->get_min_purchase_quantity(),
-                                                            )
-                                                        );
-                                                        ?>
-                                                        <button type="submit" class="single_add_to_cart_button button alt disabled wc-variation-selection-needed bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded transition" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>">
-                                                            <?php echo esc_html( $product->single_add_to_cart_text() ); ?>
-                                                        </button>
-                                                        <input type="hidden" name="product_id" value="<?php echo esc_attr( $product->get_id() ); ?>" />
-                                                        <input type="hidden" name="variation_id" class="variation_id" value="0" />
+                                <div class="flex flex-col gap-4 mb-4">
+                                    <!-- Buttons Row -->
+                                    <div class="flex flex-row gap-4 w-full">
+                                        <?php if ( $product->is_type( 'variable' ) ) : ?>
+                                            <form class="variations_form cart w-full" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo htmlspecialchars( wp_json_encode( $available_variations ) ) ?>">
+                                                <?php wp_nonce_field( 'woocommerce-cart' ); ?>
+                                                <?php do_action( 'woocommerce_before_variations_form' ); ?>
+                                                <?php if ( empty( $available_variations ) && false !== $available_variations ) : ?>
+                                                    <p class="stock out-of-stock text-red-500 text-sm"><?php esc_html_e( 'This product is currently out of stock and unavailable.', 'woocommerce' ); ?></p>
+                                                <?php else : ?>
+                                                    <table class="variations w-full mb-2">
+                                                        <tbody>
+                                                            <?php foreach ( $attributes as $attribute_name => $options ) : ?>
+                                                                <tr>
+                                                                    <td class="label pr-2">
+                                                                        <label for="<?php echo esc_attr( sanitize_title( $attribute_name ) ); ?>" class="font-semibold text-sm">
+                                                                            <?php echo wc_attribute_label( $attribute_name ); ?>
+                                                                        </label>
+                                                                    </td>
+                                                                    <td class="value">
+                                                                        <?php
+                                                                        wc_dropdown_variation_attribute_options(
+                                                                            array(
+                                                                                'options'   => $options,
+                                                                                'attribute' => $attribute_name,
+                                                                                'product'   => $product,
+                                                                            )
+                                                                        );
+                                                                        ?>
+                                                                    </td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                    <div class="single_variation_wrap">
+                                                        <div class="woocommerce-variation single_variation"></div>
+                                                        <div class="woocommerce-variation-add-to-cart variations_button flex items-center gap-2 mt-2">
+                                                            <?php
+                                                            woocommerce_quantity_input(
+                                                                array(
+                                                                    'min_value'   => apply_filters( 'woocommerce_quantity_input_min', $product->get_min_purchase_quantity(), $product ),
+                                                                    'max_value'   => apply_filters( 'woocommerce_quantity_input_max', $product->get_max_purchase_quantity(), $product ),
+                                                                    'input_value' => isset( $_POST['quantity'] ) ? wc_stock_amount( wp_unslash( $_POST['quantity'] ) ) : $product->get_min_purchase_quantity(),
+                                                                )
+                                                            );
+                                                            ?>
+                                                            <button type="submit" class="single_add_to_cart_button button alt disabled wc-variation-selection-needed bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded transition flex items-center gap-2 flex-1 justify-center text-lg font-medium" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>">
+                                                                Add to Cart xx<span style="font-size: 22px; vertical-align: middle; margin-left: 6px;">&#128722;</span>
+                                                            </button>
+                                                            <input type="hidden" name="product_id" value="<?php echo esc_attr( $product->get_id() ); ?>" />
+                                                            <input type="hidden" name="variation_id" class="variation_id" value="0" />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            <?php endif; ?>
-                                            <?php do_action( 'woocommerce_after_variations_form' ); ?>
-                                        </form>
-                                    <?php else : ?>
-                                        <form class="cart w-full" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data'>
-                                            <?php
-                                            do_action( 'woocommerce_before_add_to_cart_button' );
-                                            do_action( 'woocommerce_before_add_to_cart_quantity' );
-                                            woocommerce_quantity_input(
-                                                array(
-                                                    'min_value'   => apply_filters( 'woocommerce_quantity_input_min', $product->get_min_purchase_quantity(), $product ),
-                                                    'max_value'   => apply_filters( 'woocommerce_quantity_input_max', $product->get_max_purchase_quantity(), $product ),
-                                                    'input_value' => isset( $_POST['quantity'] ) ? wc_stock_amount( wp_unslash( $_POST['quantity'] ) ) : $product->get_min_purchase_quantity(),
-                                                )
-                                            );
-                                            do_action( 'woocommerce_after_add_to_cart_quantity' );
-                                            ?>
-                                            <button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="single_add_to_cart_button button alt bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded transition">
-                                                <?php echo esc_html( $product->single_add_to_cart_text() ); ?>
-                                            </button>
-                                            <?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
-                                        </form>
-                                    <?php endif; ?>
-                                    <button class="ml-2 px-4 py-2 border border-pink-500 text-pink-500 rounded hover:bg-pink-50 transition text-sm">Add to Wishlist <span class="ml-1">&#9825;</span></button>
-                                    <button class="ml-2 px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-lg"><span>&#128257;</span></button>
+                                                <?php endif; ?>
+                                                <?php do_action( 'woocommerce_after_variations_form' ); ?>
+                                                <button class="add-to-wishlist flex-1 px-8 py-3 border border-pink-500 text-pink-500 rounded hover:bg-pink-50 transition text-lg font-medium flex items-center justify-center gap-2 bg-white" style="border-width:2px; margin-top: 16px;">
+                                                    Add to Wishlist <span style="font-size: 22px; vertical-align: middle; margin-left: 6px;">&#9825;</span>
+                                                </button>
+                                            </form>
+                                        <?php else : ?>
+                                            <form class="cart flex-1" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data'>
+                                                <?php
+                                                do_action( 'woocommerce_before_add_to_cart_button' );
+                                                do_action( 'woocommerce_before_add_to_cart_quantity' );
+                                                // Quantity input already rendered above
+                                                do_action( 'woocommerce_after_add_to_cart_quantity' );
+                                                ?>
+                                                <button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" class="single_add_to_cart_button button alt bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded transition flex items-center gap-2 flex-1 justify-center text-lg font-medium">
+                                                    Add to Cart xx2<span style="font-size: 22px; vertical-align: middle; margin-left: 6px;">&#128722;</span>
+                                                </button>
+                                                <?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -264,6 +214,14 @@ get_header( 'shop' ); ?>
 </div>
 
 <style>
+    .add-to-wishlist{
+        background-color: #fff !important;
+        color: #ff3a5e !important;
+        border: 2px solid #ff3a5e !important;
+        padding:0px !important;
+        height: 40px !important;
+        margin-top: 20px !important;
+    }
 .single-product-wrapper {
     margin: 20px 0;
 }
@@ -316,6 +274,15 @@ get_header( 'shop' ); ?>
     align-items: center;
     gap: 15px;
     margin-top: 20px;
+}
+.woocommerce-variation-add-to-cart button {
+    background-color: #ff3a5e !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    transition: background-color 0.3s !important;
 }
 
 .quantity input {
@@ -494,34 +461,68 @@ img.flex-active{
 .woocommerce-Tabs-panel h2{
     display: none;
 }
-</style>
 
+.quantity-input-wrapper input.qty {
+    width: 48px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    font-weight: 500;
+    outline: none;
+}
+.quantity-minus, .quantity-plus {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 1.5rem;
+    line-height: 1;
+    background: #fff;
+}
+@media (max-width: 640px) {
+    .flex-row.gap-4.w-full {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    .flex-1 {
+        width: 100% !important;
+    }
+}
+</style>
+g9git
 <script>
 jQuery(document).ready(function($) {
-    // Handle variation selection
-    $('.variations_form').on('change', 'select', function() {
+    // Quantity plus/minus
+    $(document).on('click', '.quantity-plus', function() {
+        var $input = $(this).siblings('.quantity-input-wrapper').find('input.qty');
+        var val = parseInt($input.val()) || 1;
+        var max = parseInt($input.attr('max')) || 9999;
+        if(val < max) $input.val(val + 1).trigger('change');
+    });
+    $(document).on('click', '.quantity-minus', function() {
+        var $input = $(this).siblings('.quantity-input-wrapper').find('input.qty');
+        var val = parseInt($input.val()) || 1;
+        var min = parseInt($input.attr('min')) || 1;
+        if(val > min) $input.val(val - 1).trigger('change');
+    });
+
+    // Enable Add to Cart when all radios are selected
+    function checkVariationRadios() {
         var allSelected = true;
-        $('.variations_form select').each(function() {
-            if ($(this).val() === '') {
+        $('.variations_form input[type=radio][name^=attribute_]').each(function() {
+            var name = $(this).attr('name');
+            if ($('.variations_form input[type=radio][name="' + name + '"]:checked').length === 0) {
                 allSelected = false;
                 return false;
             }
         });
-        
         if (allSelected) {
             $('.single_add_to_cart_button').removeClass('disabled wc-variation-selection-needed');
         } else {
             $('.single_add_to_cart_button').addClass('disabled wc-variation-selection-needed');
         }
-    });
-    
-    // Prevent form submission if no variation selected
-    $('.variations_form').on('submit', function(e) {
-        if ($(this).find('.single_add_to_cart_button').hasClass('disabled')) {
-            e.preventDefault();
-            alert('Please select product options before adding to cart.');
-        }
-    });
+    }
+    $(document).on('change', '.variations_form input[type=radio][name^=attribute_]', checkVariationRadios);
+    checkVariationRadios();
 });
 </script>
 
